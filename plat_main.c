@@ -17,7 +17,7 @@ static char g_main_cmd[80];
 
 static unsigned char argc = 0;
 
-static char* argv[8];
+static unsigned char argv[8];
 
 /*
 
@@ -28,6 +28,7 @@ static void plat_init_screen(void)
     VIC.bordercolor = COLOR_RED;
     VIC.bgcolor0 = COLOR_BLACK;
 #endif /* #if defined __C64__ */
+    textcolor(COLOR_GRAY2);
 } /* plat_init_screen() */
 
 /*
@@ -41,30 +42,65 @@ static void plat_show_welcome(void)
 /*
 
 */
+static char plat_is_whitespace(char c)
+{
+    return ((' ' == c)
+        || ('\t' == c)
+        || ('\r' == c)
+        || ('\n' == c));
+
+} /* plat_is_whitespace() */
+
+/*
+
+*/
 static void plat_user_input_step(void)
 {
     /* flush of stdout before reading from stdin */
     /* ... */
 
     /* read a line from keyboard */
-    gets(g_main_cmd);
+    fgets(g_main_cmd, sizeof(g_main_cmd), stdin);
 
     /* tokenizer */
-    argc = 0;
-    argv[argc] = strtok(g_main_cmd, " ");
-    while ((argc < 8) && argv[argc])
     {
-        argc ++;
-        if (argc < 8)
+        unsigned char i;
+        unsigned char b_whitespace;
+
+        argc = 0;
+        i = 0;
+        b_whitespace = 1;
+        while ((i < 80) && g_main_cmd[i])
         {
-            argv[argc] = strtok(NULL, " ");
+            if (plat_is_whitespace(g_main_cmd[i]))
+            {
+                b_whitespace = 1;
+                g_main_cmd[i] = 0;
+            }
+            else
+            {
+                if (b_whitespace)
+                {
+                    if (argc < 8)
+                    {
+                        argv[argc] = i;
+                        argc ++;
+                    }
+                    b_whitespace = 0;
+                }
+            }
+            i++;
         }
     }
 
     /* decode the line and dispatch the command */
     if (argc)
     {
-        if ('q' == argv[0u][0u])
+        char * p_argv0;
+
+        p_argv0 = g_main_cmd + argv[0u];
+
+        if ('q' == p_argv0[0u])
         {
             g_main_quit = 1;
         }
@@ -73,10 +109,14 @@ static void plat_user_input_step(void)
             unsigned char i;
             for (i=0;i<argc;i++)
             {
+                char * p_arg;
+
+                p_arg = g_main_cmd + argv[i];
+
                 printf(
                     "%hu: %s\n",
                     (unsigned short int)(i),
-                    argv[i]);
+                    p_arg);
             }
         }
     }
