@@ -54,116 +54,189 @@ static char plat_is_whitespace(char c)
 /*
 
 */
+static void plat_tokenize_main_cmd(void)
+{
+    unsigned char i;
+    unsigned char b_whitespace;
+
+    argc = 0;
+    i = 0;
+    b_whitespace = 1;
+    while ((i < sizeof(g_main_cmd)) && g_main_cmd[i])
+    {
+        if (plat_is_whitespace(g_main_cmd[i]))
+        {
+            b_whitespace = 1;
+            g_main_cmd[i] = 0;
+        }
+        else if (b_whitespace)
+        {
+            if (argc < sizeof(argv))
+            {
+                argv[argc] = i;
+                argc ++;
+            }
+            b_whitespace = 0;
+        }
+        i++;
+    }
+}
+
+/*
+
+*/
+static void plat_read_main_cmd(void)
+{
+    fgets(g_main_cmd, sizeof(g_main_cmd), stdin);
+} /* plat_read_main_cmd() */
+
+/*
+
+*/
+static void plat_print_args(void)
+{
+    unsigned char i;
+    for (i=0;i<argc;i++)
+    {
+        char * p_arg;
+
+        p_arg = g_main_cmd + argv[i];
+
+        printf(
+            "%hu: %s\n",
+            (unsigned short int)(i),
+            p_arg);
+    }
+} /* plat_print_args() */
+
+/*
+
+*/
+static void plat_cmd_q(void)
+{
+    g_main_quit = 1;
+} /* plat_cmd_q() */
+
+/*
+
+*/
+static void plat_cmd_r(void)
+{
+    unsigned short int i_addr;
+    unsigned short int i_value;
+
+    /* byte register access */
+    if (2 == argc)
+    {
+        /* read register byte */
+        sscanf(g_main_cmd + argv[1u], "%hx", &i_addr);
+        i_value = (unsigned short int)(*((unsigned char *)(i_addr)));
+        printf("r %04hx %02hx\n", i_addr, i_value);
+    }
+    else if (3 == argc)
+    {
+        /* write register byte */
+        unsigned short int i_addr;
+        sscanf(g_main_cmd + argv[1u], "%hx", &i_addr);
+        sscanf(g_main_cmd + argv[2u], "%hx", &i_value);
+        *((unsigned char *)(i_addr)) = (unsigned char)(i_value);
+    }
+    else
+    {
+    }
+} /* plat_cmd_r() */
+
+/*
+
+*/
+static void plat_cmd_d(void)
+{
+    /* register dump */
+    unsigned short int i_addr;
+    unsigned char i_value;
+    unsigned char i;
+
+    if (2 == argc)
+    {
+        sscanf(g_main_cmd + argv[1u], "%hx", &i_addr);
+        for (i = 0; i < 8; i ++)
+        {
+            i_value = *((unsigned char *)(i_addr));
+            printf("r %04hx %02hx\n", i_addr, (unsigned short int)(i_value));
+            i_addr ++;
+        }
+        printf("d %04hx\n", i_addr);
+    }
+} /* plat_cmd_d() */
+
+static struct plat_cmd_info
+{
+    char * p_name;
+
+    void (*p_func)(void);
+
+} g_cmd_info[] =
+{
+    { "q", &plat_cmd_q },
+    { "r", &plat_cmd_r },
+    { "d", &plat_cmd_d }
+};
+
+/*
+
+*/
+static void plat_dispatch_main_cmd()
+{
+    if (argc)
+    {
+        char * p_argv0;
+        unsigned char i;
+        unsigned char b_found;
+
+        p_argv0 = g_main_cmd + argv[0u];
+
+        b_found = 0;
+        i = 0;
+        while (!b_found && (i<sizeof(g_cmd_info)/sizeof(g_cmd_info[0u])))
+        {
+            struct plat_cmd_info * p;
+
+            p = g_cmd_info + i;
+
+            if (0 == strcmp(p_argv0, p->p_name))
+            {
+                (*(p->p_func))();
+
+                b_found = 1;
+            }
+            else
+            {
+                i ++;
+            }
+        }
+        if (!b_found)
+        {
+            plat_print_args();
+        }
+    }
+} /* plat_dispatch_main_cmd() */
+
+/*
+
+*/
 static void plat_user_input_step(void)
 {
     /* flush of stdout before reading from stdin */
     /* ... */
 
     /* read a line from keyboard */
-    fgets(g_main_cmd, sizeof(g_main_cmd), stdin);
+    plat_read_main_cmd();
 
     /* tokenizer */
-    {
-        unsigned char i;
-        unsigned char b_whitespace;
-
-        argc = 0;
-        i = 0;
-        b_whitespace = 1;
-        while ((i < 80) && g_main_cmd[i])
-        {
-            if (plat_is_whitespace(g_main_cmd[i]))
-            {
-                b_whitespace = 1;
-                g_main_cmd[i] = 0;
-            }
-            else
-            {
-                if (b_whitespace)
-                {
-                    if (argc < 8)
-                    {
-                        argv[argc] = i;
-                        argc ++;
-                    }
-                    b_whitespace = 0;
-                }
-            }
-            i++;
-        }
-    }
+    plat_tokenize_main_cmd();
 
     /* decode the line and dispatch the command */
-    if (argc)
-    {
-        char * p_argv0;
-
-        p_argv0 = g_main_cmd + argv[0u];
-
-        if ('q' == p_argv0[0u])
-        {
-            g_main_quit = 1;
-        }
-        else if (0 == strcmp(p_argv0, "r"))
-        {
-            unsigned short int i_addr;
-            unsigned short int i_value;
-
-            /* byte register access */
-            if (2 == argc)
-            {
-                /* read register byte */
-                sscanf(g_main_cmd + argv[1u], "%hx", &i_addr);
-                i_value = (unsigned short int)(*((unsigned char *)(i_addr)));
-                printf("r %04hx %02hx\n", i_addr, i_value);
-            }
-            else if (3 == argc)
-            {
-                /* write register byte */
-                unsigned short int i_addr;
-                sscanf(g_main_cmd + argv[1u], "%hx", &i_addr);
-                sscanf(g_main_cmd + argv[2u], "%hx", &i_value);
-                *((unsigned char *)(i_addr)) = (unsigned char)(i_value);
-            }
-            else
-            {
-            }
-        }
-        else if (0 == strcmp(p_argv0, "d"))
-        {
-            /* register dump */
-            unsigned short int i_addr;
-            unsigned char i_value;
-            unsigned char i;
-
-            if (2 == argc)
-            {
-                sscanf(g_main_cmd + argv[1u], "%hx", &i_addr);
-                for (i = 0; i < 8; i ++)
-                {
-                    i_value = *((unsigned char *)(i_addr));
-                    printf("r %04hx %02hx\n", i_addr, (unsigned short int)(i_value));
-                    i_addr ++;
-                }
-                printf("d %04hx\n", i_addr);
-            }
-        }
-        else
-        {
-            unsigned char i;
-            for (i=0;i<argc;i++)
-            {
-                char * p_arg;
-
-                p_arg = g_main_cmd + argv[i];
-
-                printf(
-                    "%hu: %s\n",
-                    (unsigned short int)(i),
-                    p_arg);
-            }
-        }
-    }
+    plat_dispatch_main_cmd();
 
 } /* plat_user_input_step() */
 
