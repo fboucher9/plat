@@ -104,6 +104,50 @@ static void plat_user_input_step(void)
         {
             g_main_quit = 1;
         }
+        else if (0 == strcmp(p_argv0, "r"))
+        {
+            unsigned short int i_addr;
+            unsigned short int i_value;
+
+            /* byte register access */
+            if (2 == argc)
+            {
+                /* read register byte */
+                sscanf(g_main_cmd + argv[1u], "%hx", &i_addr);
+                i_value = (unsigned short int)(*((unsigned char *)(i_addr)));
+                printf("r %04hx %02hx\n", i_addr, i_value);
+            }
+            else if (3 == argc)
+            {
+                /* write register byte */
+                unsigned short int i_addr;
+                sscanf(g_main_cmd + argv[1u], "%hx", &i_addr);
+                sscanf(g_main_cmd + argv[2u], "%hx", &i_value);
+                *((unsigned char *)(i_addr)) = (unsigned char)(i_value);
+            }
+            else
+            {
+            }
+        }
+        else if (0 == strcmp(p_argv0, "d"))
+        {
+            /* register dump */
+            unsigned short int i_addr;
+            unsigned char i_value;
+            unsigned char i;
+
+            if (2 == argc)
+            {
+                sscanf(g_main_cmd + argv[1u], "%hx", &i_addr);
+                for (i = 0; i < 8; i ++)
+                {
+                    i_value = *((unsigned char *)(i_addr));
+                    printf("r %04hx %02hx\n", i_addr, (unsigned short int)(i_value));
+                    i_addr ++;
+                }
+                printf("d %04hx\n", i_addr);
+            }
+        }
         else
         {
             unsigned char i;
