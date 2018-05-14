@@ -79,13 +79,142 @@ feed_create(void)
 /*
 
 */
+static
+struct feed_line *
+feed_new_line(void)
+{
+    struct feed_line *
+        p_line;
+
+    p_line =
+        (struct feed_line *)(
+            malloc(
+                sizeof(struct feed_line)));
+
+    if (
+        p_line)
+    {
+        p_line->i_cols =
+            0;
+    }
+
+    return
+        p_line;
+
+} /* feed_new_line() */
+
+/*
+
+*/
+static
+struct feed_line *
+feed_get_line(
+    unsigned char y)
+{
+    if (y < i_lines)
+    {
+        return a_lines[y];
+    }
+    else
+    {
+        a_lines =
+            (struct feed_line * *)(
+                realloc(
+                    a_lines,
+                    sizeof(struct feed_line *) * (y + 1)));
+
+        while (i_lines < (y + 1))
+        {
+            a_lines[i_lines] = feed_new_line();
+            i_lines ++;
+        }
+        return a_lines[y];
+    }
+} /* feed_get_line() */
+
+/*
+
+*/
+static
+struct feed_line *
+feed_get_cursor_line(void)
+{
+    return feed_get_line(i_cur_y);
+} /* feed_get_cursor_line() */
+
+/*
+
+*/
+static
+void
+feed_insert_char(
+    unsigned char c)
+{
+    struct feed_line * p_line;
+
+    if ('\n' == c)
+    {
+        /* New line */
+        i_cur_x = 0;
+        i_cur_y ++;
+    }
+    else
+    {
+        /* get pointer to current line */
+        p_line = feed_get_cursor_line();
+        if (p_line)
+        {
+            if (p_line->i_cols < FEED_MAX_COLS)
+            {
+                /* grow line by one */
+                p_line =
+                    (struct feed_line *)(
+                        realloc(
+                            p_line,
+                            sizeof(struct feed_line) + p_line->i_cols));
+
+                if (p_line)
+                {
+                    p_line->i_cols ++;
+
+                    a_lines[i_cur_y] = p_line;
+
+                    /* shift characters after cursor */
+                    {
+                        unsigned char t;
+                        t = p_line->i_cols - 1;
+                        while (t > i_cur_x)
+                        {
+                            p_line->a_data[t] = p_line->a_data[t-1];
+                            t --;
+                        }
+                    }
+
+                    /* insert character at cursor position */
+                    p_line->a_data[i_cur_x] = c;
+
+                    i_cur_x ++;
+                }
+            }
+        }
+    }
+}
+
+/*
+
+*/
 void
 feed_load(
     unsigned char const * p_buf,
     unsigned short int i_buf_len)
 {
-    (void)(p_buf);
-    (void)(i_buf_len);
+    unsigned short int i_buf_iterator;
+    i_buf_iterator = 0;
+    while (i_buf_iterator < i_buf_len)
+    {
+        feed_insert_char(p_buf[i_buf_iterator]);
+        i_buf_iterator ++;
+    }
 } /* feed_load() */
 
 /*
@@ -95,6 +224,39 @@ static
 void
 feed_refresh(void)
 {
+    unsigned char y;
+    unsigned char x;
+    struct feed_line * p_line;
+
+    gotoxy(0, 0);
+    printf("cx=%hu cy=%hu\n",
+        (unsigned short int)(i_cur_x),
+        (unsigned short int)(i_cur_y));
+    y = 0;
+    while (y < i_lines)
+    {
+        if (a_lines)
+        {
+            p_line = a_lines[y];
+            if (p_line)
+            {
+                printf("l%hu(%hu):[",
+                    (unsigned short int)(y),
+                    (unsigned short int)(p_line->i_cols));
+
+                x = 0;
+                while (x < p_line->i_cols)
+                {
+                    putchar(p_line->a_data[x]);
+                    x ++;
+                }
+                putchar(']');
+                putchar('\n');
+            }
+        }
+        y ++;
+    }
+
 } /* feed_refresh() */
 
 /*
@@ -115,6 +277,10 @@ feed_start(void)
         if ('q' == i_key)
         {
             b_stop = 1;
+        }
+        else
+        {
+            feed_insert_char(i_key);
         }
     }
 

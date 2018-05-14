@@ -11,6 +11,8 @@ Description:
 
 #include <plat_precomp.h>
 
+#include <plat_vim.h>
+
 static unsigned char g_main_quit = 0;
 
 static char g_main_cmd[80];
@@ -169,6 +171,18 @@ static void plat_cmd_d(void)
     }
 } /* plat_cmd_d() */
 
+/*
+
+*/
+static void plat_cmd_v(void)
+{
+    feed_create();
+
+    feed_start();
+
+    feed_destroy();
+} /* plat_cmd_v() */
+
 static struct plat_cmd_info
 {
     char * p_name;
@@ -179,7 +193,8 @@ static struct plat_cmd_info
 {
     { "q", &plat_cmd_q },
     { "r", &plat_cmd_r },
-    { "d", &plat_cmd_d }
+    { "d", &plat_cmd_d },
+    { "v", &plat_cmd_v }
 };
 
 /*
