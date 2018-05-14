@@ -226,10 +226,12 @@ feed_refresh(void)
 {
     unsigned char y;
     unsigned char x;
+    unsigned char i_cols;
     struct feed_line * p_line;
+    char * p_data;
 
     gotoxy(0, 0);
-    printf("cx=%hu cy=%hu\n",
+    cprintf("cx=%hu cy=%hu\r\n",
         (unsigned short int)(i_cur_x),
         (unsigned short int)(i_cur_y));
     y = 0;
@@ -240,18 +242,34 @@ feed_refresh(void)
             p_line = a_lines[y];
             if (p_line)
             {
-                printf("l%hu(%hu):[",
+                i_cols = p_line->i_cols;
+                p_data = p_line->a_data;
+
+                gotoxy(0, 1 + y);
+
+                cprintf("%03hu:%03hu|",
                     (unsigned short int)(y),
-                    (unsigned short int)(p_line->i_cols));
+                    (unsigned short int)(i_cols));
 
                 x = 0;
-                while (x < p_line->i_cols)
+                if (i_cols < 30)
                 {
-                    putchar(p_line->a_data[x]);
-                    x ++;
+                    while (x < i_cols)
+                    {
+                        cputc(p_data[x]);
+                        x ++;
+                    }
+                    cclear(32 - i_cols);
                 }
-                putchar(']');
-                putchar('\n');
+                else
+                {
+                    while (x < 30)
+                    {
+                        cputc(p_data[x]);
+                        x ++;
+                    }
+                    cclear(2);
+                }
             }
         }
         y ++;
@@ -265,6 +283,8 @@ feed_refresh(void)
 void
 feed_start(void)
 {
+    cursor(1);
+
     /* User interaction loop */
     b_stop = 0;
     while (!b_stop)
