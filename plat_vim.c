@@ -241,6 +241,8 @@ feed_insert_char(
 {
     struct feed_line * p_line;
 
+    c = feed_convert_from_ascii(c);
+
     if (FEED_CODE_RETURN == c)
     {
         /* New line */
@@ -344,7 +346,6 @@ void
 feed_refresh(void)
 {
     unsigned char y;
-    unsigned char x;
     unsigned char i_cols;
     struct feed_line * p_line;
     char * p_data;
@@ -352,9 +353,9 @@ feed_refresh(void)
 
     y = 0;
     p_screen = (unsigned char *)(0x400u);
-    while (y < i_lines)
+    while (y < 25)
     {
-        if (a_lines && (y < 25))
+        if (a_lines && (y < i_lines))
         {
             p_line = a_lines[y];
             if (p_line)
@@ -362,10 +363,10 @@ feed_refresh(void)
                 i_cols = p_line->i_cols;
                 p_data = p_line->a_data;
 
-                x = 0;
                 if (i_cols < 40)
                 {
                     memcpy(p_screen, p_data, i_cols);
+                    memset(p_screen + i_cols, 32, 40 - i_cols);
                 }
                 else
                 {
@@ -375,8 +376,16 @@ feed_refresh(void)
             else
             {
             }
-            p_screen += 40;
         }
+        else
+        {
+            memset(p_screen, 32, 40);
+        }
+        if ((y == i_cur_y) && (i_cur_x < 40))
+        {
+            p_screen[i_cur_x] ^= 0x80;
+        }
+        p_screen += 40;
         y ++;
     }
 
@@ -389,7 +398,7 @@ void
 feed_start(void)
 {
     clrscr();
-    cursor(1);
+    cursor(0);
 
     /* User interaction loop */
     b_stop = 0;
@@ -398,13 +407,9 @@ feed_start(void)
         /* Refresh */
         feed_refresh();
 
-        gotoxy(i_cur_x, i_cur_y);
-
         i_key = (unsigned char)(cgetc());
 
-        i_key = feed_convert_from_ascii(i_key);
-
-        if (FEED_CODE_Q == i_key)
+        if ('q' == i_key)
         {
             b_stop = 1;
         }
