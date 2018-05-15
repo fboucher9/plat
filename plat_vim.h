@@ -10,8 +10,8 @@ Description:
 
 Comments:
 
-    -   Maximum line length
-    -   Maximum number of lines
+    -   Maximum line length (256)
+    -   Maximum number of lines (256)
     -   No wrapping, use horizontal scroll
     -   Line list
     -   Simple realloc vectors
@@ -20,6 +20,8 @@ Comments:
     -   Scroll by page, not by line
     -   Single global context
     -   No status codes
+    -   No utf-8
+    -   No vt100 escape codes
 
 */
 

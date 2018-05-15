@@ -8,6 +8,22 @@ Description:
 
 */
 
+/*
+
+Convert ASCII to screen code
+----------------------------
+
+0x00 - 0x1F -> xor 0x80
+0x20 - 0x3F -> xor 0x00
+0x40 - 0x5F -> xor 0x40
+0x60 - 0x6F -> xor 0x20
+0x80 - 0x9F -> xor 0x40
+0xc0 - 0xdf -> xor 0x80
+0xe0 - 0xfe -> xor 0x80
+0xff        -> = 0x5e
+
+*/
+
 #include <plat_precomp.h>
 
 #include <plat_vim.h>
@@ -23,6 +39,10 @@ Description:
 #define FEED_MAX_LINES 255u
 
 #define FEED_MAX_CHUNKS 16u
+
+#define FEED_CODE_Q (char)('q' - 64u)
+
+#define FEED_CODE_RETURN (char)(13 + 128)
 
 struct feed_line;
 
@@ -75,6 +95,45 @@ feed_create(void)
 /* feed_append_char() */
 /* feed_insert_char() */
 /* feed_delete_char() */
+
+static
+char
+feed_convert_from_ascii(
+    char c_ascii)
+{
+    if (c_ascii <= 0x1F)
+    {
+        return (char)(c_ascii ^ 0x80);
+    }
+    else if (c_ascii <= 0x3F)
+    {
+        return c_ascii;
+    }
+    else if (c_ascii <= 0x5F)
+    {
+        return (char)(c_ascii ^ 0x40);
+    }
+    else if (c_ascii <= 0x7F)
+    {
+        return (char)(c_ascii ^ 0x20);
+    }
+    else if (c_ascii <= 0x9F)
+    {
+        return (char)(c_ascii ^ 0x40);
+    }
+    else if (c_ascii <= 0xBF)
+    {
+        return (char)(c_ascii + 0xC0);
+    }
+    else if (c_ascii <= 0xDF)
+    {
+        return (char)(c_ascii ^ 0x80);
+    }
+    else
+    {
+        return (char)(c_ascii ^ 0x80);
+    }
+}
 
 /*
 
@@ -152,7 +211,7 @@ feed_insert_char(
 {
     struct feed_line * p_line;
 
-    if ('\n' == c)
+    if (FEED_CODE_RETURN == c)
     {
         /* New line */
         i_cur_x = 0;
@@ -229,15 +288,13 @@ feed_refresh(void)
     unsigned char i_cols;
     struct feed_line * p_line;
     char * p_data;
+    char * p_screen;
 
-    gotoxy(0, 0);
-    cprintf("cx=%hu cy=%hu\r\n",
-        (unsigned short int)(i_cur_x),
-        (unsigned short int)(i_cur_y));
     y = 0;
+    p_screen = (unsigned char *)(0x400u);
     while (y < i_lines)
     {
-        if (a_lines)
+        if (a_lines && (y < 25))
         {
             p_line = a_lines[y];
             if (p_line)
@@ -245,32 +302,20 @@ feed_refresh(void)
                 i_cols = p_line->i_cols;
                 p_data = p_line->a_data;
 
-                gotoxy(0, 1 + y);
-
-                cprintf("%03hu:%03hu|",
-                    (unsigned short int)(y),
-                    (unsigned short int)(i_cols));
-
                 x = 0;
-                if (i_cols < 30)
+                if (i_cols < 40)
                 {
-                    while (x < i_cols)
-                    {
-                        cputc(p_data[x]);
-                        x ++;
-                    }
-                    cclear(32 - i_cols);
+                    memcpy(p_screen, p_data, i_cols);
                 }
                 else
                 {
-                    while (x < 30)
-                    {
-                        cputc(p_data[x]);
-                        x ++;
-                    }
-                    cclear(2);
+                    memcpy(p_screen, p_data, 40);
                 }
             }
+            else
+            {
+            }
+            p_screen += 40;
         }
         y ++;
     }
@@ -283,7 +328,8 @@ feed_refresh(void)
 void
 feed_start(void)
 {
-    cursor(1);
+    clrscr();
+    cursor(0);
 
     /* User interaction loop */
     b_stop = 0;
@@ -294,7 +340,9 @@ feed_start(void)
 
         i_key = (unsigned char)(cgetc());
 
-        if ('q' == i_key)
+        i_key = feed_convert_from_ascii(i_key);
+
+        if (FEED_CODE_Q == i_key)
         {
             b_stop = 1;
         }
