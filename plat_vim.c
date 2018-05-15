@@ -18,9 +18,9 @@ Convert ASCII to screen code
 0x40 - 0x5F -> xor 0x40
 0x60 - 0x6F -> xor 0x20
 0x80 - 0x9F -> xor 0x40
+0xa0 - 0xbf -> xor 0xc0
 0xc0 - 0xdf -> xor 0x80
-0xe0 - 0xfe -> xor 0x80
-0xff        -> = 0x5e
+0xe0 - 0xff -> xor 0x80
 
 */
 
@@ -43,6 +43,36 @@ Convert ASCII to screen code
 #define FEED_CODE_Q (char)('q' - 64u)
 
 #define FEED_CODE_RETURN (char)(13 + 128)
+
+#define FEED_CODE_DOWN (char)(17 + 128)
+
+#define FEED_CODE_UP (char)(145 + 64)
+
+#define FEED_CODE_RIGHT (char)(29 + 128)
+
+#define FEED_CODE_LEFT (char)(157 + 64)
+
+#define FEED_CODE_HOME (char)(19 + 128)
+
+#define FEED_CODE_CLEAR (char)(147 + 64)
+
+#define FEED_CODE_F1 (char)(133 + 64)
+
+#define FEED_CODE_F3 (char)(134 + 64)
+
+#define FEED_CODE_F5 (char)(135 + 64)
+
+#define FEED_CODE_F7 (char)(136 + 64)
+
+#define FEED_CODE_F2 (char)(137 + 64)
+
+#define FEED_CODE_F4 (char)(138 + 64)
+
+#define FEED_CODE_F6 (char)(139 + 64)
+
+#define FEED_CODE_F8 (char)(140 + 64)
+
+#define FEED_CODE_SPACE (char)(32)
 
 struct feed_line;
 
@@ -123,7 +153,7 @@ feed_convert_from_ascii(
     }
     else if (c_ascii <= 0xBF)
     {
-        return (char)(c_ascii + 0xC0);
+        return (char)(c_ascii ^ 0xC0);
     }
     else if (c_ascii <= 0xDF)
     {
@@ -217,6 +247,31 @@ feed_insert_char(
         i_cur_x = 0;
         i_cur_y ++;
     }
+    else if (FEED_CODE_LEFT == c)
+    {
+        if (i_cur_x)
+        {
+            i_cur_x --;
+        }
+    }
+    else if (FEED_CODE_RIGHT == c)
+    {
+        i_cur_x ++;
+    }
+    else if (FEED_CODE_UP == c)
+    {
+        if (i_cur_y)
+        {
+            i_cur_y --;
+        }
+    }
+    else if (FEED_CODE_DOWN == c)
+    {
+        if (i_cur_y < i_lines)
+        {
+            i_cur_y ++;
+        }
+    }
     else
     {
         /* get pointer to current line */
@@ -225,6 +280,11 @@ feed_insert_char(
         {
             if (p_line->i_cols < FEED_MAX_COLS)
             {
+                if (i_cur_x > p_line->i_cols)
+                {
+                    i_cur_x = p_line->i_cols;
+                }
+
                 /* grow line by one */
                 p_line =
                     (struct feed_line *)(
@@ -329,7 +389,7 @@ void
 feed_start(void)
 {
     clrscr();
-    cursor(0);
+    cursor(1);
 
     /* User interaction loop */
     b_stop = 0;
@@ -337,6 +397,8 @@ feed_start(void)
     {
         /* Refresh */
         feed_refresh();
+
+        gotoxy(i_cur_x, i_cur_y);
 
         i_key = (unsigned char)(cgetc());
 
