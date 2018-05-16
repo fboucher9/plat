@@ -231,6 +231,33 @@ feed_get_cursor_line(void)
     return feed_get_line(i_cur_y);
 } /* feed_get_cursor_line() */
 
+static
+void
+feed_clip_cursor_pos(void)
+{
+    struct feed_line * p_line;
+
+    if (i_cur_y < i_lines)
+    {
+        if (a_lines)
+        {
+            p_line = a_lines[i_cur_y];
+            if (p_line)
+            {
+                if (i_cur_x > p_line->i_cols)
+                {
+                    i_cur_x = p_line->i_cols;
+                }
+            }
+        }
+    }
+    else
+    {
+        i_cur_y = i_lines;
+        i_cur_x = 0;
+    }
+}
+
 /*
 
 */
@@ -248,6 +275,10 @@ feed_insert_char(
         /* New line */
         i_cur_x = 0;
         i_cur_y ++;
+        p_line = feed_get_cursor_line();
+        if (p_line)
+        {
+        }
     }
     else if (FEED_CODE_LEFT == c)
     {
@@ -259,12 +290,16 @@ feed_insert_char(
     else if (FEED_CODE_RIGHT == c)
     {
         i_cur_x ++;
+
+        feed_clip_cursor_pos();
     }
     else if (FEED_CODE_UP == c)
     {
         if (i_cur_y)
         {
             i_cur_y --;
+
+            feed_clip_cursor_pos();
         }
     }
     else if (FEED_CODE_DOWN == c)
@@ -272,6 +307,8 @@ feed_insert_char(
         if (i_cur_y < i_lines)
         {
             i_cur_y ++;
+
+            feed_clip_cursor_pos();
         }
     }
     else
