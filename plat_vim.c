@@ -40,39 +40,39 @@ Convert ASCII to screen code
 
 #define FEED_MAX_CHUNKS 16u
 
-#define FEED_CODE_Q (char)('q' - 64u)
+#define FEED_CODE_Q (unsigned char)('q' - 64u)
 
-#define FEED_CODE_RETURN (char)(13 + 128)
+#define FEED_CODE_RETURN (unsigned char)(13 + 128)
 
-#define FEED_CODE_DOWN (char)(17 + 128)
+#define FEED_CODE_DOWN (unsigned char)(17 + 128)
 
-#define FEED_CODE_UP (char)(145 + 64)
+#define FEED_CODE_UP (unsigned char)(145 + 64)
 
-#define FEED_CODE_RIGHT (char)(29 + 128)
+#define FEED_CODE_RIGHT (unsigned char)(29 + 128)
 
-#define FEED_CODE_LEFT (char)(157 + 64)
+#define FEED_CODE_LEFT (unsigned char)(157 + 64)
 
-#define FEED_CODE_HOME (char)(19 + 128)
+#define FEED_CODE_HOME (unsigned char)(19 + 128)
 
-#define FEED_CODE_CLEAR (char)(147 + 64)
+#define FEED_CODE_CLEAR (unsigned char)(147 + 64)
 
-#define FEED_CODE_F1 (char)(133 + 64)
+#define FEED_CODE_F1 (unsigned char)(133 + 64)
 
-#define FEED_CODE_F3 (char)(134 + 64)
+#define FEED_CODE_F3 (unsigned char)(134 + 64)
 
-#define FEED_CODE_F5 (char)(135 + 64)
+#define FEED_CODE_F5 (unsigned char)(135 + 64)
 
-#define FEED_CODE_F7 (char)(136 + 64)
+#define FEED_CODE_F7 (unsigned char)(136 + 64)
 
-#define FEED_CODE_F2 (char)(137 + 64)
+#define FEED_CODE_F2 (unsigned char)(137 + 64)
 
-#define FEED_CODE_F4 (char)(138 + 64)
+#define FEED_CODE_F4 (unsigned char)(138 + 64)
 
-#define FEED_CODE_F6 (char)(139 + 64)
+#define FEED_CODE_F6 (unsigned char)(139 + 64)
 
-#define FEED_CODE_F8 (char)(140 + 64)
+#define FEED_CODE_F8 (unsigned char)(140 + 64)
 
-#define FEED_CODE_SPACE (char)(32)
+#define FEED_CODE_SPACE (unsigned char)(32)
 
 struct feed_line;
 
@@ -127,13 +127,13 @@ feed_create(void)
 /* feed_delete_char() */
 
 static
-char
+unsigned char
 feed_convert_from_ascii(
-    char c_ascii)
+    unsigned char c_ascii)
 {
     if (c_ascii <= 0x1F)
     {
-        return (char)(c_ascii ^ 0x80);
+        return (unsigned char)(c_ascii ^ 0x80);
     }
     else if (c_ascii <= 0x3F)
     {
@@ -141,38 +141,38 @@ feed_convert_from_ascii(
     }
     else if (c_ascii <= 0x5F)
     {
-        return (char)(c_ascii ^ 0x40);
+        return (unsigned char)(c_ascii ^ 0x40);
     }
     else if (c_ascii <= 0x7F)
     {
-        return (char)(c_ascii ^ 0x20);
+        return (unsigned char)(c_ascii ^ 0x20);
     }
     else if (c_ascii <= 0x9F)
     {
-        return (char)(c_ascii ^ 0x40);
+        return (unsigned char)(c_ascii ^ 0x40);
     }
     else if (c_ascii <= 0xBF)
     {
-        return (char)(c_ascii ^ 0xC0);
+        return (unsigned char)(c_ascii ^ 0xC0);
     }
     else if (c_ascii <= 0xDF)
     {
-        return (char)(c_ascii ^ 0x80);
+        return (unsigned char)(c_ascii ^ 0x80);
     }
     else
     {
-        return (char)(c_ascii ^ 0x80);
+        return (unsigned char)(c_ascii ^ 0x80);
     }
 }
 
 static
-char
+unsigned char
 feed_convert_to_ascii(
-    char c_code)
+    unsigned char c_code)
 {
     if (c_code <= 0x1F)
     {
-        return (char)(c_code ^ 0x40);
+        return (unsigned char)(c_code ^ 0x40);
     }
     else if (c_code <= 0x3F)
     {
@@ -180,27 +180,27 @@ feed_convert_to_ascii(
     }
     else if (c_code <= 0x5F)
     {
-        return (char)(c_code ^ 0x20);
+        return (unsigned char)(c_code ^ 0x20);
     }
     else if (c_code <= 0x7F)
     {
-        return (char)(c_code ^ 0x40);
+        return (unsigned char)(c_code ^ 0x40);
     }
     else if (c_code <= 0x9F)
     {
-        return (char)(c_code ^ 0x80);
+        return (unsigned char)(c_code ^ 0x80);
     }
     else if (c_code <= 0xBF)
     {
-        return (char)(c_code ^ 0x80);
+        return (unsigned char)(c_code ^ 0x80);
     }
     else if (c_code <= 0xDF)
     {
-        return (char)(c_code ^ 0x40);
+        return (unsigned char)(c_code ^ 0x40);
     }
     else
     {
-        return (char)(c_code ^ 0x80);
+        return (unsigned char)(c_code ^ 0x80);
     }
 }
 
@@ -442,8 +442,8 @@ feed_refresh(void)
     unsigned char y;
     unsigned char i_cols;
     struct feed_line * p_line;
-    char * p_data;
-    char * p_screen;
+    unsigned char * p_data;
+    unsigned char * p_screen;
 
     y = 0;
     p_screen = (unsigned char *)(0x400u);
@@ -620,6 +620,8 @@ feed_save(
                 p_buf[i_buf_iterator] =
                     feed_convert_to_ascii(
                         p_line->a_data[i_col_iterator]);
+
+                i_buf_iterator ++;
             }
             else
             {
@@ -687,6 +689,16 @@ feed_destroy(void)
 
         a_lines =
             (struct feed_line * *)(0);
+
+        i_lines = 0;
+
+        i_cur_x = 0;
+
+        i_cur_y = 0;
+
+        i_page = 0;
+
+        b_stop = 0;
     }
 
 } /* feed_destroy() */

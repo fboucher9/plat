@@ -176,9 +176,29 @@ static void plat_cmd_d(void)
 */
 static void plat_cmd_v(void)
 {
+    unsigned short int i_buf_len;
+    unsigned char * p_buf;
+
     feed_create();
 
     feed_start();
+
+    i_buf_len = feed_length();
+
+    if (i_buf_len)
+    {
+        p_buf = (unsigned char *)(malloc(i_buf_len));
+        if (p_buf)
+        {
+            feed_save(p_buf, i_buf_len);
+
+            printf("buf=[%.*s]\n",
+                (int)(i_buf_len),
+                (char *)(p_buf));
+
+            free((void *)(p_buf));
+        }
+    }
 
     feed_destroy();
 } /* plat_cmd_v() */
