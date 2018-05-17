@@ -165,6 +165,45 @@ feed_convert_from_ascii(
     }
 }
 
+static
+char
+feed_convert_to_ascii(
+    char c_code)
+{
+    if (c_code <= 0x1F)
+    {
+        return (char)(c_code ^ 0x40);
+    }
+    else if (c_code <= 0x3F)
+    {
+        return c_code;
+    }
+    else if (c_code <= 0x5F)
+    {
+        return (char)(c_code ^ 0x20);
+    }
+    else if (c_code <= 0x7F)
+    {
+        return (char)(c_code ^ 0x40);
+    }
+    else if (c_code <= 0x9F)
+    {
+        return (char)(c_code ^ 0x80);
+    }
+    else if (c_code <= 0xBF)
+    {
+        return (char)(c_code ^ 0x80);
+    }
+    else if (c_code <= 0xDF)
+    {
+        return (char)(c_code ^ 0x40);
+    }
+    else
+    {
+        return (char)(c_code ^ 0x80);
+    }
+}
+
 /*
 
 */
@@ -311,6 +350,10 @@ feed_insert_char(
             feed_clip_cursor_pos();
         }
     }
+    else if (FEED_CODE_HOME == c)
+    {
+        i_cur_x = 0;
+    }
     else
     {
         /* get pointer to current line */
@@ -363,16 +406,28 @@ feed_insert_char(
 */
 void
 feed_load(
-    unsigned char const * p_buf,
-    unsigned short int i_buf_len)
+    unsigned char const *
+        p_buf,
+    unsigned short int
+        i_buf_len)
 {
-    unsigned short int i_buf_iterator;
-    i_buf_iterator = 0;
-    while (i_buf_iterator < i_buf_len)
+    unsigned short int
+        i_buf_iterator;
+
+    i_buf_iterator =
+        0;
+
+    while (
+        i_buf_iterator
+        < i_buf_len)
     {
-        feed_insert_char(p_buf[i_buf_iterator]);
+        feed_insert_char(
+            p_buf[
+                i_buf_iterator]);
+
         i_buf_iterator ++;
     }
+
 } /* feed_load() */
 
 /*
@@ -382,6 +437,8 @@ static
 void
 feed_refresh(void)
 {
+    static unsigned char hi = 0;
+    static unsigned char lo = 0;
     unsigned char y;
     unsigned char i_cols;
     struct feed_line * p_line;
@@ -390,7 +447,7 @@ feed_refresh(void)
 
     y = 0;
     p_screen = (unsigned char *)(0x400u);
-    while (y < 25)
+    while (y < 24)
     {
         if (a_lines && (y < i_lines))
         {
@@ -425,6 +482,12 @@ feed_refresh(void)
         p_screen += 40;
         y ++;
     }
+    memset(p_screen, hi, 40);
+    lo ++;
+    if (0 == lo)
+    {
+        hi ++;
+    }
 
 } /* feed_refresh() */
 
@@ -437,6 +500,9 @@ feed_start(void)
     clrscr();
     cursor(0);
 
+    /* Enable keyboard repeat for all keys */
+    *((unsigned char *)(650)) = 128;
+
     /* User interaction loop */
     b_stop = 0;
     while (!b_stop)
@@ -444,15 +510,20 @@ feed_start(void)
         /* Refresh */
         feed_refresh();
 
-        i_key = (unsigned char)(cgetc());
+        /* TODO: try direct keyboard input routine */
 
-        if ('q' == i_key)
+        if (kbhit())
         {
-            b_stop = 1;
-        }
-        else
-        {
-            feed_insert_char(i_key);
+            i_key = (unsigned char)(cgetc());
+
+            if ('q' == i_key)
+            {
+                b_stop = 1;
+            }
+            else
+            {
+                feed_insert_char(i_key);
+            }
         }
     }
 
@@ -467,7 +538,32 @@ feed_start(void)
 unsigned short int
 feed_length(void)
 {
-    return 0;
+    unsigned short int
+        i_total_len;
+
+    unsigned char
+        i_line_iterator;
+
+    /* Calculate total length of text */
+    i_total_len = 0;
+
+    i_line_iterator = 0;
+
+    while (
+        i_line_iterator
+        < i_lines)
+    {
+        i_total_len +=
+            a_lines[i_line_iterator]->i_cols;
+
+        i_total_len ++;
+
+        i_line_iterator ++;
+    }
+
+    return
+        i_total_len;
+
 } /* feed_length() */
 
 /*
@@ -478,8 +574,77 @@ feed_save(
     unsigned char * p_buf,
     unsigned short int i_buf_len)
 {
-    (void)(p_buf);
-    (void)(i_buf_len);
+    struct feed_line *
+        p_line;
+
+    unsigned short int
+        i_buf_iterator;
+
+    unsigned char
+        i_line_iterator;
+
+    unsigned char
+        i_col_iterator;
+
+    unsigned char
+        i_cols;
+
+    i_buf_iterator =
+        0;
+
+    i_line_iterator =
+        0;
+
+    while (
+        i_line_iterator
+        < i_lines)
+    {
+        p_line =
+            a_lines[
+                i_line_iterator];
+
+        i_cols =
+            p_line->i_cols;
+
+        i_col_iterator =
+            0;
+
+        while (
+            i_col_iterator
+            < i_cols)
+        {
+            if (
+                i_buf_iterator
+                < i_buf_len)
+            {
+                p_buf[i_buf_iterator] =
+                    feed_convert_to_ascii(
+                        p_line->a_data[i_col_iterator]);
+            }
+            else
+            {
+                break;
+            }
+
+            i_col_iterator ++;
+        }
+
+        if (
+            i_buf_iterator
+            < i_buf_len)
+        {
+            p_buf[i_buf_iterator] = '\n';
+
+            i_buf_iterator ++;
+        }
+        else
+        {
+            break;
+        }
+
+        i_line_iterator ++;
+    }
+
 } /* feed_save() */
 
 /*
@@ -488,6 +653,42 @@ feed_save(
 void
 feed_destroy(void)
 {
+    unsigned char
+        i_line_iterator;
+
+    if (
+        a_lines)
+    {
+        i_line_iterator =
+            0;
+
+        while (
+            i_line_iterator
+            < i_lines)
+        {
+            if (
+                a_lines[i_line_iterator])
+            {
+                free(
+                    (void *)(
+                        a_lines[i_line_iterator]));
+
+                a_lines[i_line_iterator] =
+                    (struct feed_line *)(
+                        0);
+            }
+
+            i_line_iterator ++;
+        }
+
+        free(
+            (void *)(
+                a_lines));
+
+        a_lines =
+            (struct feed_line * *)(0);
+    }
+
 } /* feed_destroy() */
 
 /* end-of-file: plat_vim.c */
